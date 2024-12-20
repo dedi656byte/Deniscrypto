@@ -77,7 +77,5 @@ wsproto
 chardet
 #eventlet
 
-tensorboard==2.17.0
-tensorboard-data-server==0.7.2
-tensorflow==2.15.0
-tensorflow-cpu==2.15.0
+tensorflow-cpu>=2.10.0,<3.0
+
