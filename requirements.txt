@@ -75,13 +75,9 @@ wheel
 wrapt
 wsproto
 chardet
-eventlet
+#eventlet
 
 tensorboard
 tensorboard-data-server
 tensorflow
 tensorflow-cpu
-
-psutil
-
-concurrent.futures
