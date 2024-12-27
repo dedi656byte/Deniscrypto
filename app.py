@@ -1,6 +1,3 @@
-#import eventlet
-#eventlet.monkey_patch()
-
 from coinbase.rest import RESTClient
 from dotenv import load_dotenv
 from threading import Thread
@@ -10,6 +7,7 @@ import time
 import uuid
 from decimal import Decimal, getcontext, ROUND_DOWN
 from flask import Flask, request, jsonify, render_template, redirect, url_for, session
+from requests.exceptions import HTTPError
 from functools import wraps
 import pyotp
 from flask_mail import Mail, Message
@@ -66,9 +64,9 @@ try:
 except Exception as e:
     print("Authentication failed:", e)
 #####################################################################################################
-#selected_crypto_pairs = ['BTC-USDC', 'ETH-USDC', 'USDT-USDC', 'ADA-USDC', 'DOGE-USDC', 'LTC-USDC', 'XRP-USDC', 'SOL-USDC']
-#selected_crypto_pairs = ['BTC-USDC']
-selected_crypto_pairs = []
+#selected_crypto_pairs = ['BTC-USDC', 'ETH-USDC', 'USDT-USDC', 'ADA-USDC', 'DOGE-USDC', 'XRP-USDC', 'SOL-USDC','MATIC-USDC','ALGO-USDC','DOGE-USDC','DOT-USDC' ]
+selected_crypto_pairs = ['BTC-USDC']
+#selected_crypto_pairs = []
 #valide
 #selected_crypto_pairs=['ADA-USDC','AAVE-USDC','ALGO-USDC','ARB-USDC','AVAX-USDC','BCH-USDC','BTC-USDC','CRV-USDC','DOGE-USDC','DOT-USDC','ETC-USDC','ETH-USDC','FET-USDC','FIL-USDC','GRT-USDC','HBAR-USDC','ICP-USDC','IDEX-USDC','LINK-USDC','LTC-USDC','MATIC-USDC','NEAR-USDC','PEPE-USDC','SOL-USDC','SUI-USDC','SUPER-USDC','SUSHI-USDC','SWFTC-USDC','UNI-USDC','USDT-USDC','VET-USDC','XLM-USDC','XYO-USDC','XRP-USDC','YFI-USDC']
 
@@ -90,7 +88,6 @@ for selected_crypto_pair in selected_crypto_pairs:
 ####################################################################################################################################################
 # Initialisation de Flask-SocketIO
 app = Flask(__name__)
-#socketio = SocketIO(app, async_mode='eventlet')
 
 Profit_cumul = 0
 log_data = ""  # Global log data
@@ -99,7 +96,7 @@ log_data2 = ""
 log_data3 = ""
 log_data4 = ""
 # Initialisation du client Coinbase
-accounts = client.get_accounts()
+#accounts = client.get_accounts()
 ####################################################################################################################################################
 # Configuration de Flask-Mail
 app.config['MAIL_SERVER'] = 'smtp.elasticemail.com'
@@ -122,8 +119,8 @@ buy_percentage_of_capital = Decimal("0.05")  # 5% of capital per DCA buy
 #sell_percentage_of_capital = Decimal("0.05") # 5% of capital per DCA sell
 sell_profit_target = Decimal("0.005")  # Sell when 5% profit target is reached
 stop_loss_threshold = Decimal("0.005")  # Stop loss at 5% below initial buy-in
-dca_interval_minute = 1
-dca_interval_seconds = dca_interval_minute * 60  # DCA interval in seconds (adjust as needed)
+#dca_interval_minute = 1
+#dca_interval_seconds = dca_interval_minute * 60  # DCA interval in seconds (adjust as needed)
 ia = False
 ####################################################################################################################################################
 ADA_USDC= True
@@ -476,7 +473,7 @@ def place_market_buy(product_id):
             }
         }
         #recuperons le prix au moment de l'achat de la paire en usdc
-        prix_moment_achat = get_market_price(product_id)
+        prix_moment_achat = Decimal(get_market_price(product_id))
         # Place the order with required arguments
         response = client.create_order(
             client_order_id=client_order_id,
@@ -488,7 +485,7 @@ def place_market_buy(product_id):
         if response['success']:
             log_message("Order created successfully.")
             save_logs_to_file()
-            log_message(f"prix unitaire à l'achat :{prix_moment_achat}: USDC")
+            log_message(f"prix unitaire à l'achat :{prix_moment_achat} USDC")
             save_logs_to_file()
             log_message(f"Market buy order response for {product_id}: {response}")
             save_logs_to_file()
@@ -518,8 +515,8 @@ def place_market_buy(product_id):
 #####################################################################################################
 #S IL YA PROBLEME VOIRE CETTE PARTIE
 def monitor_position_for_tp_sl(product_id, amount_in_usdc, prix_moment_achat):
-    global sell_profit_target, stop_loss_threshold
-    log_message(f"Monitoring position for {product_id} with TP: {sell_profit_target}, SL: {stop_loss_threshold}")
+    global sell_profit_target
+    log_message(f"Monitoring position for {product_id} with TP: {sell_profit_target}")
     save_logs_to_file()
 
     while True:
@@ -535,15 +532,11 @@ def monitor_position_for_tp_sl(product_id, amount_in_usdc, prix_moment_achat):
             #log_message(f"Le prix actuel de {product_id} est : {prix_actuel} USDC")
             log_message(f"Le prix au moment de l'achat du {product_id} était : {prix_moment_achat} USDC")
             save_logs_to_file()
+            
             objectif_takeprofit = prix_moment_achat + (prix_moment_achat * sell_profit_target)
-            objectif_stoploss = prix_moment_achat - (prix_moment_achat * stop_loss_threshold)
             log_message(f"Take profit % : {sell_profit_target}")
             save_logs_to_file()
             log_message(f"Take profit objectif : {objectif_takeprofit} USDC")
-            save_logs_to_file()
-            log_message(f"Stop Loss % : {stop_loss_threshold}")
-            save_logs_to_file()
-            log_message(f"Stop Loss objectif : {objectif_stoploss} USDC")
             save_logs_to_file()
             log_message(f"vérifions les conditions de take profit et de stop loss...")
             save_logs_to_file()
@@ -558,28 +551,17 @@ def monitor_position_for_tp_sl(product_id, amount_in_usdc, prix_moment_achat):
                 log_message(f"=====================================================================")
                 save_logs_to_file()
                 break
-            # Check stop loss condition
-            stoploss = (prix_moment_achat * stop_loss_threshold)
-            if prix_actuel <= prix_moment_achat - stoploss:
-                log_message(f"Stop loss atteint pour {product_id} au prix de {prix_actuel}. Nous procedons à la vente de nos {product_id}.")
-                save_logs_to_file()
-                log_message(f"Vendons au montant acheté soit {prix_moment_achat} et contentonnons de perdre {stoploss} {product_id} plus les frais de transactions")
-                save_logs_to_file()
-                place_market_sell(product_id, amount_in_usdc, prix_moment_achat)
-                log_message(f"=====================================================================")
-                save_logs_to_file()
-                break
-            log_message(f"Les conditions de take profit et de stop loss ne sont pas remplit...")
+            log_message(f"Les conditions de take profit ne sont pas remplit...")
             save_logs_to_file()
             log_message(f"=====================================================================")
             save_logs_to_file()
-            time.sleep(1)
+            time.sleep(5)
             if not bot_running:
                 log_message(f"DCA trading bot stopped")
                 save_logs_to_file()
                 break
         except Exception as e:
-            log_message(f"Error monitoring position for TP/SL: {e}")
+            log_message(f"Error monitoring position for TP: {e}")
             save_logs_to_file()
             time.sleep(10)
 #####################################################################################################
@@ -787,29 +769,50 @@ def dca_trading_bot():
                 log_message(f"Le solde USDC est : {usdc_balance}")
                 save_logs_to_file()
 
-                # Déterminer le montant à acheter
+                #déterminer le montant à acheter
                 buy_amount = usdc_balance * buy_percentage_of_capital
-                if usdc_balance <= Decimal('1.0'):
+                # Vérification du solde USDC
+                if usdc_balance < Decimal(buy_amount):
                     log_message(f"Solde USDC insuffisant pour placer un ordre d'achat de : {product_id}.")
                     save_logs_to_file()
-                    continue  # Passer à la paire suivante
+                    #Analise de d'autre portefeuilles pour alimenter notre portefeuille USDC
+                    log_message(f"Analysons le solde d'autre portefeuilles pour trouvez les fond nécessaire à l'acaht de : {product_id}.")
+                    save_logs_to_file()
+                    selected_crypto_base = selected_crypto_pair.split('-')[0]
+                    check_and_convert_all_accounts(selected_crypto_base)
+                    log_message(f"Conversions treminés")
+                    save_logs_to_file()
+                    #si les fonds on été trouvés on passe a l'achat sinon on passe à la paire de crypto suivante
 
                 # Achat avec ou sans IA
                 if ia:
                     log_message("IA activated.")
                     save_logs_to_file()
+                    
+                    hist = fetch_crypto_data(selected_crypto_pair)
+                    train, test = train_test_split(hist, test_size=test_size)
+                    train, test, X_train, X_test, y_train, y_test = prepare_data(hist, 'close', window_len=window_len, zero_base=zero_base, test_size=test_size)
+                    targets = test['close'][window_len:]
+                    preds = model.predict(X_test).squeeze()
+                    preds = test['close'].values[:-window_len] * (preds + 1)
+                    preds = pd.Series(index=targets.index, data=preds)
+
+                    # yesterday_last_real = test['close'].loc[test.index.date == previous_date.date()]
+                    yesterday_last_real = preds.loc[previous_date: previous_date]
+                    today_pred = preds.loc[today_date: today_date]
+
                     trend_comparison = will_crypto_increase_or_decrease(yesterday_last_real, today_pred)
                     if trend_comparison > 0:
                         log_message(f"{product_id} Prendra de la valeur, achat en cours.")
                         save_logs_to_file()
-                        place_market_buy(product_id)
+                        #place_market_buy(product_id)
                     else:
                         log_message(f"{product_id} Perdra de la valeur, achat annulé.")
                         save_logs_to_file()
                 else:
                     log_message(f"Placons un ordre d'achat d'un montant de {buy_amount} pour : {product_id}.")
                     save_logs_to_file()
-                    place_market_buy(product_id)
+                    #place_market_buy(product_id)
 
             # Mise en pause après avoir traité toutes les paires
             log_message("Toutes les paires traitées. Mise en pause du robot.")
@@ -819,15 +822,15 @@ def dca_trading_bot():
         except Exception as e:
             log_message(f"Exception in DCA trading bot: {e}")
             save_logs_to_file()
-            time.sleep(15)
+            time.sleep(10)
 
     log_message("Finalisation des processus terminée. Arrêt du bot.")
     save_logs_to_file()
 #derniere version prenant en compte l ia
 #####################################################################################################
-# Fonction pour vérifier et comparer les soldes toutes les secondes
+#accounts = client.get_accounts()
 def Balance_Total():
-    global log_data1  # Utiliser la variable soldes initiaux définie en dehors de la fonction
+    global log_data1, accounts  # Utiliser la variable soldes initiaux définie en dehors de la fonction
 
     while True:
         # Réinitialiser log_data à chaque itération avant d'ajouter de nouveaux logs
@@ -839,17 +842,35 @@ def Balance_Total():
             transactions = client.get_transaction_summary()
             balance_total = transactions['total_balance']
             log_data1 += f"{balance_total}\n"
+            time.sleep(2)
 
-            accounts = client.get_accounts()  # Obtenez les comptes
-            print("mise à jour des comptes")
+            # Gestion des erreurs 429 et limitation du taux de requêtes
+            retries = 0
+            max_retries = 5
+            delay = 1
+            while retries < max_retries:
+                try:
+                    accounts = client.get_accounts()  # Obtenez les comptes
+                    print("mise à jour des comptes")
+                    log_message("mise à jour des comptes")
+                    save_logs_to_file()
+                    break
+                except HTTPError as e:
+                    if e.response.status_code == 429:
+                        print("Rate limit exceeded. Retrying after delay...")
+                        log_message("Rate limit exceeded. Retrying after delay...")
+                        save_logs_to_file()
+                        time.sleep(delay)
+                        retries += 1
+                        delay *= 2  # Backoff exponentiel
+                    else:
+                        raise e
         except KeyError as e:
             log_data1 += f"Erreur de récupération de la balance: {str(e)}\n"
-
-        # Envoyer les données mises à jour au client via SocketIO
-        #socketio.emit('update_log1', {'log_Balance_Total': log_data1})
+            save_logs_to_file()
 
         # Attendre une seconde avant de vérifier à nouveau
-        time.sleep(1)
+        time.sleep(2)
 
 # Créer et démarrer le thread
 thread = threading.Thread(target=Balance_Total)
@@ -857,7 +878,7 @@ thread.daemon = True  # Ensure the thread exits when the main program exits
 thread.start()
 #####################################################################################
 #########################################################################################
-accounts = client.get_accounts()
+#accounts = client.get_accounts()
 #########################################################################################
 def get_usdc_balance():
     global accounts
@@ -904,7 +925,7 @@ def Your_Usdc():
         #socketio.emit('update_log2', {'log_usdc_balance': log_data2})
 
         # Attendre une seconde avant de vérifier à nouveau
-        time.sleep(1.6)
+        time.sleep(2.6)
 
 # Créer et démarrer le thread
 thread1 = threading.Thread(target=Your_Usdc)
@@ -932,23 +953,24 @@ def Your_Eth2():
         #socketio.emit('update_log3', {'log_eth2_balance': log_data3})
 
         # Attendre une seconde avant de vérifier à nouveau
-        time.sleep(1.7)
+        time.sleep(2.8)
 
 # Créer et démarrer le thread
 thread2 = threading.Thread(target=Your_Eth2)
 thread2.daemon = True  # Ensure the thread exits when the main program exits
 thread2.start()
 #####################################################################################
-#####################################################################################
 # Fonction pour récupérer les soldes initiaux (une fois par jour)
 def get_soldes_initiaux():
+    accounts = client.get_accounts()
     soldes_initiaux = {}
     global log_data
     for account in accounts.accounts:
         solde_initial = float(account.available_balance['value'])
         currency = account.available_balance['currency']
-        soldes_initiaux[account] = (solde_initial, currency)
+        soldes_initiaux[account.uuid] = (solde_initial, currency)
         log_data += f"Solde initial pour le compte {currency}: {solde_initial} {currency}\n"
+    print(f"contenue du dictionnaire solde initiaux: {soldes_initiaux}")
     return soldes_initiaux
 
 # Récupérer les soldes initiaux pour commencer
@@ -985,13 +1007,13 @@ def check_soldes():
         try:
             # voir si ca fonctionne
             Profit_cumul = 0
-
+            print(f"contenue du dictionnaire solde initiaux dans check solde: {soldes_initiaux}")
             log_data = ""  # Réinitialiser les logs
             heure_locale = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             log_data += f"Dernière mise à jour : {heure_locale}\n"
 
             for account in accounts.accounts:
-                solde_initial, currency = soldes_initiaux.get(account, (0, 'USD'))  # Valeur par défaut si non trouvé
+                solde_initial, currency = soldes_initiaux.get(account.uuid, (0, 'USD'))  # Valeur par défaut si non trouvé
                 try:
                     crypto = account.available_balance['currency']
                     accountts = client.get_accounts()
@@ -1310,11 +1332,12 @@ def index():
         "buy_percentage_of_capital": Decimal("0.05"),
         #"sell_percentage_of_capital": Decimal("0.05"),
         "sell_profit_target": Decimal("0.005"),
-        "stop_loss_threshold": Decimal("0.005"),
+        #"stop_loss_threshold": Decimal("0.005"),
         "dca_interval_minute": 1
     }
     return render_template('index.html', bot_running=bot_running, form_data=form_data, logs="\n".join(logs[-100:]),log_Balance_Total=log_data1, log=log_data, log_usdc_balance=log_data2, log_eth2_balance=log_data3, log_orders=log_data4)
     #return render_template('index.html', bot_running=bot_running, form_data=form_data,logs="\n".join(logs[-100:]))
+
 ####################################################################
 @app.route('/start', methods=['POST'])
 def start_bot():
@@ -1333,19 +1356,19 @@ def stop_bot():
 ####################################################################
 @app.route('/update_settings', methods=['POST'])
 def update_settings():
-    global selected_crypto_pairs, buy_percentage_of_capital, sell_profit_target, stop_loss_threshold, dca_interval_minute,ia
+    global selected_crypto_pairs, buy_percentage_of_capital, sell_profit_target,ia
     #user_risk_level = request.form.get('risk_level', user_risk_level)
     #compounding_enabled = request.form.get('compounding') == 'on'
     #initial_trade_amount = float(request.form.get('amount', initial_trade_amount))
     buy_percentage_of_capital = Decimal(request.form.get('buy_percentage_of_capital', buy_percentage_of_capital))
     #sell_percentage_of_capital = Decimal(request.form.get('sell_percentage_of_capital', sell_percentage_of_capital))
     sell_profit_target = Decimal(request.form.get('sell_profit_target', sell_profit_target))
-    stop_loss_threshold = Decimal(request.form.get('stop_loss_threshold', stop_loss_threshold))
-    dca_interval_minute = int(request.form.get('dca_interval_minute', dca_interval_minute))
+    #stop_loss_threshold = Decimal(request.form.get('stop_loss_threshold', stop_loss_threshold))
+    #dca_interval_minute = int(request.form.get('dca_interval_minute', dca_interval_minute))
     selected_crypto_pairs = request.form.getlist('selected_crypto_pairs')
     ia = request.form.getlist('ia')
     # selected_crypto_pair = request.form.get('crypto_pair', 'BTC-USDC')
-    log_message(f"Settings updated: selected_crypto_pairs={selected_crypto_pairs},buy_percentage_of_capital={buy_percentage_of_capital}, sell_profit_target={sell_profit_target}, stop_loss_threshold={stop_loss_threshold}, dca_interval_minute={dca_interval_minute}, ia={ia}")
+    log_message(f"Settings updated: selected_crypto_pairs={selected_crypto_pairs},buy_percentage_of_capital={buy_percentage_of_capital}, sell_profit_target={sell_profit_target}, ia={ia}")
     save_logs_to_file()
     return redirect(url_for('index'))
 ####################################################################
@@ -1372,13 +1395,12 @@ def log_orders():
 @app.route('/log', methods=['GET'])
 def log():
     return jsonify({"log": log_data})  # Send logs as an array of strings
-
 #######################################################
 # API pour obtenir les données des prédictions en temps réel
 @app.route('/get_predictions')
 def get_predictions():
     return jsonify({'predictions': {crypto: all_predictions[crypto].tolist() for crypto in all_predictions}})
 
-
+#application = app
 if __name__ == '__main__':
-    socketio.run(app, debug=False)
+    app.run(debug=False)
