@@ -805,14 +805,14 @@ def dca_trading_bot():
                     if trend_comparison > 0:
                         log_message(f"{product_id} Prendra de la valeur, achat en cours.")
                         save_logs_to_file()
-                        #place_market_buy(product_id)
+                        place_market_buy(product_id)
                     else:
                         log_message(f"{product_id} Perdra de la valeur, achat annulé.")
                         save_logs_to_file()
                 else:
                     log_message(f"Placons un ordre d'achat d'un montant de {buy_amount} pour : {product_id}.")
                     save_logs_to_file()
-                    #place_market_buy(product_id)
+                    place_market_buy(product_id)
 
             # Mise en pause après avoir traité toutes les paires
             log_message("Toutes les paires traitées. Mise en pause du robot.")
