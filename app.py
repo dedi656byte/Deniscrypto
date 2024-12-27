@@ -64,11 +64,11 @@ try:
 except Exception as e:
     print("Authentication failed:", e)
 #####################################################################################################
-#selected_crypto_pairs = ['BTC-USDC', 'ETH-USDC', 'USDT-USDC', 'ADA-USDC', 'DOGE-USDC', 'XRP-USDC', 'SOL-USDC','MATIC-USDC','ALGO-USDC','DOGE-USDC','DOT-USDC' ]
+selected_crypto_pairs = ['BTC-USDC', 'ETH-USDC', 'USDT-USDC', 'ADA-USDC', 'DOGE-USDC', 'XRP-USDC', 'SOL-USDC','MATIC-USDC','ALGO-USDC','DOGE-USDC','DOT-USDC' ]
 #selected_crypto_pairs = ['BTC-USDC']
 #selected_crypto_pairs = []
 #valide
-selected_crypto_pairs=['ADA-USDC','AAVE-USDC','ALGO-USDC','ARB-USDC','AVAX-USDC','BCH-USDC','BTC-USDC','CRV-USDC','DOGE-USDC','DOT-USDC','ETC-USDC','ETH-USDC','FET-USDC','FIL-USDC','GRT-USDC','HBAR-USDC','ICP-USDC','IDEX-USDC','LINK-USDC','LTC-USDC','MATIC-USDC','NEAR-USDC','PEPE-USDC','SOL-USDC','SUI-USDC','SUPER-USDC','SUSHI-USDC','SWFTC-USDC','UNI-USDC','USDT-USDC','VET-USDC','XLM-USDC','XYO-USDC','XRP-USDC','YFI-USDC']
+#selected_crypto_pairs=['ADA-USDC','AAVE-USDC','ALGO-USDC','ARB-USDC','AVAX-USDC','BCH-USDC','BTC-USDC','CRV-USDC','DOGE-USDC','DOT-USDC','ETC-USDC','ETH-USDC','FET-USDC','FIL-USDC','GRT-USDC','HBAR-USDC','ICP-USDC','IDEX-USDC','LINK-USDC','LTC-USDC','MATIC-USDC','NEAR-USDC','PEPE-USDC','SOL-USDC','SUI-USDC','SUPER-USDC','SUSHI-USDC','SWFTC-USDC','UNI-USDC','USDT-USDC','VET-USDC','XLM-USDC','XYO-USDC','XRP-USDC','YFI-USDC']
 
 #VALIDE
 # Fetch product details
