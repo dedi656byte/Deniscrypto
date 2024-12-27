@@ -81,3 +81,5 @@ tensorboard
 tensorboard-data-server
 tensorflow
 tensorflow-cpu
+gunicorn
+
