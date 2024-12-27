@@ -1402,5 +1402,5 @@ def get_predictions():
     return jsonify({'predictions': {crypto: all_predictions[crypto].tolist() for crypto in all_predictions}})
 
 #application = app
-if __name__ == '__main__':
-    app.run(debug=False)
+#if __name__ == '__main__':
+#    app.run(debug=False)
